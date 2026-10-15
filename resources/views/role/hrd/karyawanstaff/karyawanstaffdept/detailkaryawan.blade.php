@@ -91,6 +91,12 @@
             color: #c82333;
         }
 
+        .profile-status.is-onboarding {
+            border-color: #ffecb5;
+            background: #fff9e8;
+            color: #9a6b00;
+        }
+
         .status-dot {
             width: 7px;
             height: 7px;
@@ -473,6 +479,12 @@
 
     @php
         $isActiveEmployee = $karyawanstaff->status === 'AKTIF';
+        $employeeStatusLabel = match ($karyawanstaff->status) {
+            'ONBOARDING' => 'Onboarding',
+            'AKTIF' => 'Aktif',
+            'TIDAK AKTIF', 'TIDAKAKTIF' => 'Tidak Aktif',
+            default => 'Belum diisi',
+        };
         $nameParts = preg_split('/\s+/', trim($karyawanstaff->nama ?? ''));
         $initials = collect($nameParts)
             ->filter()
@@ -518,6 +530,7 @@
                 'Nomor Pokok Karyawan (NPK)' => $karyawanstaff->npk ?: 'Belum diisi',
                 'Status Karyawan' => match ($karyawanstaff->status) {
                     'AKTIF' => 'Aktif',
+                    'ONBOARDING' => 'Onboarding',
                     'TIDAK AKTIF', 'TIDAKAKTIF' => 'Tidak Aktif',
                     default => 'Belum diisi',
                 },
@@ -599,9 +612,9 @@
                                 <span class="mx-1">·</span>NPK {{ $karyawanstaff->npk }}
                             @endif
                         </div>
-                        <span class="profile-status {{ $isActiveEmployee ? '' : 'is-inactive' }}">
+                        <span class="profile-status {{ $isActiveEmployee ? '' : ($karyawanstaff->status === 'ONBOARDING' ? 'is-onboarding' : 'is-inactive') }}">
                             <span class="status-dot" aria-hidden="true"></span>
-                            {{ $isActiveEmployee ? 'Karyawan Aktif' : 'Karyawan Tidak Aktif' }}
+                            Karyawan {{ $employeeStatusLabel }}
                         </span>
                     </div>
                 </div>
@@ -652,6 +665,7 @@
                             <div class="personal-summary-item">
                                 <div class="personal-summary-label">Status Karyawan</div>
                                 <p class="personal-summary-value">{{ match ($karyawanstaff->status) {
+                                    'ONBOARDING' => 'Onboarding',
                                     'AKTIF' => 'Aktif',
                                     'TIDAK AKTIF', 'TIDAKAKTIF' => 'Tidak Aktif',
                                     default => 'Belum diisi',

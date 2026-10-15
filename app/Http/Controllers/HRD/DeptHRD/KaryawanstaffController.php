@@ -17,6 +17,7 @@ class KaryawanstaffController extends Controller
     {
         $totalKaryawan = Karyawanstaff::count();
         $totalKaryawanAktif = Karyawanstaff::where('status', 'AKTIF')->count();
+        $totalKaryawanOnboarding = Karyawanstaff::where('status', 'ONBOARDING')->count();
         $totalKaryawanNonaktif = Karyawanstaff::whereIn('status', ['TIDAK AKTIF', 'TIDAKAKTIF'])->count();
 
         $query = Karyawanstaff::query();
@@ -33,7 +34,9 @@ class KaryawanstaffController extends Controller
         }
 
         $status = $request->input('status', null);
-        if (in_array($status, ['TIDAK AKTIF', 'TIDAKAKTIF'], true)) {
+        if ($status === 'ONBOARDING') {
+            $query->where('status', 'ONBOARDING');
+        } elseif (in_array($status, ['TIDAK AKTIF', 'TIDAKAKTIF'], true)) {
             $query->whereIn('status', ['TIDAKAKTIF', 'TIDAK AKTIF']);
         } elseif ($status === 'AKTIF') {
             $query->where('status', 'AKTIF');
@@ -69,6 +72,7 @@ class KaryawanstaffController extends Controller
             'karyawanstaffs',
             'totalKaryawan',
             'totalKaryawanAktif',
+            'totalKaryawanOnboarding',
             'totalKaryawanNonaktif',
             'departements'
         ));
@@ -88,7 +92,7 @@ class KaryawanstaffController extends Controller
         $karyawanstaff = DB::transaction(function () use ($validated) {
             $karyawanstaff = new Karyawanstaff;
             $karyawanstaff->nama = $validated['nama'];
-            $karyawanstaff->status = 'AKTIF';
+            $karyawanstaff->status = 'ONBOARDING';
             $karyawanstaff->npk = $validated['npk'];
             $karyawanstaff->tmk = $validated['tmk'];
             $karyawanstaff->jabatan = $validated['jabatan'];
@@ -143,7 +147,7 @@ class KaryawanstaffController extends Controller
             'jabatan' => ['required', 'string', 'max:255'],
             'lokasi' => ['required', 'string', 'max:255'],
             'tmk' => ['required', 'date'],
-            'status' => ['required', 'in:AKTIF,TIDAK AKTIF,TIDAKAKTIF'],
+            'status' => ['required', 'in:ONBOARDING,AKTIF,TIDAK AKTIF,TIDAKAKTIF'],
             'profile' => ['nullable', 'array'],
             'profile.personal' => ['nullable', 'array'],
             'profile.personal.nik' => ['nullable', 'string', 'max:100'],
@@ -204,7 +208,9 @@ class KaryawanstaffController extends Controller
         $validated = $validator->validate();
 
         $karyawanstaff->nama = $validated['nama'];
-        $karyawanstaff->status = $validated['status'];
+        $karyawanstaff->status = $validated['status'] === 'TIDAKAKTIF'
+            ? 'TIDAK AKTIF'
+            : $validated['status'];
         $karyawanstaff->npk = $validated['npk'];
         $karyawanstaff->tmk = $validated['tmk'];
         $karyawanstaff->jabatan = $validated['jabatan'];

@@ -35,6 +35,11 @@
             vertical-align: middle;
         }
 
+        .department-table-scroll {
+            max-height: min(60vh, 480px);
+            overflow-y: auto;
+        }
+
         .department-table > tbody > tr > td {
             padding: 14px 16px;
             border-bottom: 1px solid #f2f3f5;
@@ -138,7 +143,8 @@
                 </form>
             </div>
 
-            <div class="table-responsive">
+            <div class="table-responsive department-table-scroll" role="region"
+                aria-label="Daftar departemen" tabindex="0">
                 <table class="table department-table mb-0">
                     <thead>
                         <tr>

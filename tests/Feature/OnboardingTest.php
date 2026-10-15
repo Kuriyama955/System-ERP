@@ -9,6 +9,7 @@ beforeEach(function () {
     Schema::dropIfExists('onboarding_task_karyawan');
     Schema::dropIfExists('onboarding_tasks');
     Schema::dropIfExists('karyawanstaffs');
+    Schema::dropIfExists('departemens');
 
     Schema::create('karyawanstaffs', function ($table) {
         $table->id();
@@ -18,7 +19,13 @@ beforeEach(function () {
         $table->string('jabatan')->nullable();
         $table->string('lokasi')->nullable();
         $table->date('tmk')->nullable();
-        $table->string('status')->default('AKTIF');
+        $table->string('status')->default('ONBOARDING');
+        $table->timestamps();
+    });
+
+    Schema::create('departemens', function ($table) {
+        $table->id();
+        $table->string('nama_departemen')->unique();
         $table->timestamps();
     });
 
@@ -73,6 +80,7 @@ afterEach(function () {
     Schema::dropIfExists('facilities');
     Schema::dropIfExists('personal');
     Schema::dropIfExists('karyawanstaffs');
+    Schema::dropIfExists('departemens');
 });
 
 test('HRD can manage master tasks, assign tasks to multiple employees and update individual statuses', function () {
@@ -201,4 +209,52 @@ test('HRD can add an active onboarding task from an employee profile', function 
         ->assertSessionHasErrors('onboarding_task_id');
 
     expect(DB::table('onboarding_task_karyawan')->count())->toBe(1);
+});
+
+test('new staff start in onboarding and HRD can update their employment status', function () {
+    DB::table('departemens')->insert([
+        'nama_departemen' => 'Produksi',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->post(route('staff.store'), [
+        'nama' => 'Rina',
+        'npk' => '2001',
+        'departement' => 'Produksi',
+        'jabatan' => 'Operator',
+        'lokasi' => 'Pabrik',
+        'tmk' => '2026-10-15',
+    ])->assertRedirect();
+
+    $staffId = DB::table('karyawanstaffs')->where('npk', '2001')->value('id');
+    expect(DB::table('karyawanstaffs')->where('id', $staffId)->value('status'))
+        ->toBe('ONBOARDING');
+
+    $this->get(route('staff.index', ['status' => 'ONBOARDING']))
+        ->assertOk()
+        ->assertSee('Rina')
+        ->assertSee('Onboarding');
+
+    $employeeData = [
+        'nama' => 'Rina',
+        'npk' => '2001',
+        'departement' => 'Produksi',
+        'jabatan' => 'Operator',
+        'lokasi' => 'Pabrik',
+        'tmk' => '2026-10-15',
+    ];
+
+    $this->put(route('staff.update', $staffId), $employeeData + ['status' => 'AKTIF'])
+        ->assertRedirect(route('staff.show', $staffId));
+    expect(DB::table('karyawanstaffs')->where('id', $staffId)->value('status'))
+        ->toBe('AKTIF');
+    $this->get(route('staff.show', $staffId))
+        ->assertOk()
+        ->assertSee('Karyawan Aktif');
+
+    $this->put(route('staff.update', $staffId), $employeeData + ['status' => 'TIDAK AKTIF'])
+        ->assertRedirect(route('staff.show', $staffId));
+    expect(DB::table('karyawanstaffs')->where('id', $staffId)->value('status'))
+        ->toBe('TIDAK AKTIF');
 });

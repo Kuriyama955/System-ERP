@@ -85,6 +85,20 @@
             color: #28a745;
         }
 
+        .stat-onboarding {
+            background: #fff9e8;
+            border-color: #ffecb5;
+        }
+
+        .stat-onboarding .stat-icon {
+            background: #ffecb5;
+        }
+
+        .stat-onboarding .stat-icon span,
+        .stat-onboarding .stat-value {
+            color: #b58105;
+        }
+
         .stat-nonaktif {
             background: #fff5f5;
             border-color: #f5c6cb;
@@ -214,6 +228,16 @@
             background: #28a745;
         }
 
+        .status-onboarding {
+            background: #fff9e8;
+            color: #9a6b00;
+            border-color: #ffecb5;
+        }
+
+        .status-onboarding .status-dot {
+            background: #d99a00;
+        }
+
         .status-nonaktif {
             background: #fff5f5;
             color: #dc3545;
@@ -270,7 +294,7 @@
 
         {{-- ── Summary Stat Cards ── --}}
         <div class="row g-3 mb-4">
-            <div class="col-sm-6 col-md-4">
+            <div class="col-sm-6 col-md-3">
                 <div class="stat-card stat-total">
                     <div class="stat-icon"><span class="material-symbols-outlined">groups</span></div>
                     <div>
@@ -279,7 +303,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-sm-6 col-md-4">
+            <div class="col-sm-6 col-md-3">
                 <div class="stat-card stat-aktif">
                     <div class="stat-icon"><span class="material-symbols-outlined">check_circle</span></div>
                     <div>
@@ -288,7 +312,16 @@
                     </div>
                 </div>
             </div>
-            <div class="col-sm-6 col-md-4">
+            <div class="col-sm-6 col-md-3">
+                <div class="stat-card stat-onboarding">
+                    <div class="stat-icon"><span class="material-symbols-outlined">pending_actions</span></div>
+                    <div>
+                        <div class="stat-value">{{ $totalKaryawanOnboarding }}</div>
+                        <div class="stat-label">Onboarding</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-3">
                 <div class="stat-card stat-nonaktif">
                     <div class="stat-icon"><span class="material-symbols-outlined">person_off</span></div>
                     <div>
@@ -319,6 +352,7 @@
                         <span class="material-symbols-outlined" style="font-size:14px">toggle_on</span>
                         {{ match (request('status')) {
                             'AKTIF' => 'Aktif',
+                            'ONBOARDING' => 'Onboarding',
                             default => 'Tidak Aktif',
                         } }}
                     </span>
@@ -361,6 +395,7 @@
                             <label class="filter-label">Status</label>
                             <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                                 <option value="">Semua Status</option>
+                                <option value="ONBOARDING" {{ request('status') == 'ONBOARDING' ? 'selected' : '' }}>Onboarding</option>
                                 <option value="AKTIF" {{ request('status') == 'AKTIF' ? 'selected' : '' }}>Aktif
                                 </option>
                                 <option value="TIDAK AKTIF" {{ in_array(request('status'), ['TIDAK AKTIF', 'TIDAKAKTIF'], true) ? 'selected' : '' }}>Tidak
@@ -519,6 +554,10 @@
                                             <span class="status-pill status-aktif">
                                                 <span class="status-dot"></span> Aktif
                                             </span>
+                                        @elseif ($karyawan->status === 'ONBOARDING')
+                                            <span class="status-pill status-onboarding">
+                                                <span class="status-dot"></span> Onboarding
+                                            </span>
                                         @else
                                             <span class="status-pill status-nonaktif">
                                                 <span class="status-dot"></span> Non-Aktif
@@ -594,7 +633,7 @@
                 </div>
                 <form method="POST" action="{{ route('staff.store') }}">
                     @csrf
-                    <input type="hidden" name="status" value="AKTIF">
+                    <input type="hidden" name="status" value="ONBOARDING">
                     <div class="modal-body px-4 py-3">
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -724,6 +763,7 @@
                                 <label for="editEmployeeStatus" class="form-label fw-semibold">Status <span
                                         class="text-danger">*</span></label>
                                 <select name="status" id="editEmployeeStatus" class="form-select" required>
+                                    <option value="ONBOARDING" @selected(old('status') === 'ONBOARDING')>Onboarding</option>
                                     <option value="AKTIF" @selected(old('status') === 'AKTIF')>Aktif</option>
                                     <option value="TIDAK AKTIF"
                                         {{ in_array(old('status'), ['TIDAK AKTIF', 'TIDAKAKTIF'], true) ? 'selected' : '' }}>

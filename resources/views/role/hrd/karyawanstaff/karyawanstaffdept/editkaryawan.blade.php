@@ -175,8 +175,8 @@
                         <div class="col-md-3">
                             <label for="status" class="form-label">Status karyawan</label>
                             <select id="status" name="status" class="form-select" required>
-                                @foreach (['AKTIF' => 'Aktif', 'TIDAK AKTIF' => 'Tidak aktif', 'TIDAKAKTIF' => 'Tidak aktif (format lama)'] as $value => $label)
-                                    <option value="{{ $value }}" @selected(old('status', $karyawanstaff->status) === $value)>
+                                @foreach (['ONBOARDING' => 'Onboarding', 'AKTIF' => 'Aktif', 'TIDAK AKTIF' => 'Tidak aktif'] as $value => $label)
+                                    <option value="{{ $value }}" @selected(old('status', in_array($karyawanstaff->status, ['TIDAK AKTIF', 'TIDAKAKTIF'], true) ? 'TIDAK AKTIF' : $karyawanstaff->status) === $value)>
                                         {{ $label }}
                                     </option>
                                 @endforeach
