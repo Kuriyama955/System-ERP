@@ -14,11 +14,8 @@ return new class extends Migration
         Schema::create('activity_logs', function (Blueprint $table) {
             $table->id();
 
-            // Relasi ke tabel proses_produksis dan users
-            // onDelete('cascade') memastikan jika data produksi atau user dihapus, log terkait ikut bersih
-            $table->foreignId('proses_produksi_id')
-                ->constrained('proses_produksis')
-                ->onDelete('cascade');
+            // Tabel proses_produksis dikelola di luar migration Laravel ini.
+            $table->unsignedBigInteger('proses_produksi_id');
 
             $table->foreignId('user_id')
                 ->constrained('users')
@@ -43,6 +40,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('activity_logs');
     }
 };
