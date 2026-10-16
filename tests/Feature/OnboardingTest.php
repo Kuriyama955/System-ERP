@@ -258,3 +258,48 @@ test('new staff start in onboarding and HRD can update their employment status',
     expect(DB::table('karyawanstaffs')->where('id', $staffId)->value('status'))
         ->toBe('TIDAK AKTIF');
 });
+
+test('new staff are automatically assigned all active onboarding tasks', function () {
+    DB::table('departemens')->insert([
+        'nama_departemen' => 'Produksi',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    $activeTaskIds = collect(['Lengkapi data', 'Induksi'])->map(fn ($name) => DB::table('onboarding_tasks')->insertGetId([
+        'nama_task' => $name,
+        'is_active' => true,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]));
+    DB::table('onboarding_tasks')->insert([
+        'nama_task' => 'Task nonaktif',
+        'is_active' => false,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->post(route('staff.store'), [
+        'nama' => 'Nina',
+        'npk' => '3001',
+        'departement' => 'Produksi',
+        'jabatan' => 'Operator',
+        'lokasi' => 'Pabrik',
+        'tmk' => '2026-10-15',
+    ])->assertRedirect();
+
+    $staffId = DB::table('karyawanstaffs')->where('npk', '3001')->value('id');
+    $assignments = DB::table('onboarding_task_karyawan')
+        ->where('karyawanstaff_id', $staffId)
+        ->orderBy('onboarding_task_id')
+        ->get();
+
+    expect($assignments)->toHaveCount(2)
+        ->and($assignments->pluck('onboarding_task_id')->all())->toBe($activeTaskIds->sort()->values()->all())
+        ->and($assignments->pluck('status')->unique()->all())->toBe(['belum selesai']);
+
+    $this->get(route('staff.show', $staffId))
+        ->assertOk()
+        ->assertSee('Lengkapi data')
+        ->assertSee('Induksi')
+        ->assertDontSee('Task nonaktif');
+});

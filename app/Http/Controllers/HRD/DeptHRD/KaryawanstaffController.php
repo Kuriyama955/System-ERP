@@ -100,11 +100,22 @@ class KaryawanstaffController extends Controller
             $karyawanstaff->departement = $validated['departement'];
             $karyawanstaff->save();
 
+            $activeTaskAssignments = OnboardingTask::query()
+                ->where('is_active', true)
+                ->get(['id'])
+                ->map(fn (OnboardingTask $task) => [
+                    'onboarding_task_id' => $task->id,
+                    'status' => 'belum selesai',
+                ])
+                ->all();
+
+            $karyawanstaff->onboardingAssignments()->createMany($activeTaskAssignments);
+
             return $karyawanstaff;
         });
 
         return redirect()->route('staff.show', $karyawanstaff->id)
-            ->with('success', 'Karyawan berhasil dibuat.');
+            ->with('success', 'Karyawan berhasil dibuat beserta task onboarding aktif.');
 
     }
 

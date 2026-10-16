@@ -25,7 +25,7 @@ class HrisTrainingSeeder extends Seeder
                     'tema' => $theme,
                     'tanggal_aktual' => now()->toDateString(),
                     'lokasi' => 'Lokasi DEMO',
-            
+
                 ]
             );
         }
