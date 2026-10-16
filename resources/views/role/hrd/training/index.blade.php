@@ -121,6 +121,34 @@
             padding: 0;
         }
 
+        .training-participant-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #d9dee5;
+            border-radius: 6px;
+        }
+
+        .training-participant-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 9px 12px;
+            border-bottom: 1px solid #f0f1f4;
+            cursor: pointer;
+        }
+
+        .training-participant-option:last-child {
+            border-bottom: 0;
+        }
+
+        .training-participant-option:hover {
+            background: #f8f8fc;
+        }
+
+        .training-participant-option[hidden] {
+            display: none;
+        }
+
         /* ---------- Modal ---------- */
         .training-section-title {
             display: flex;
@@ -213,6 +241,7 @@
                                 <th>Tema</th>
                                 <th>Tanggal</th>
                                 <th class="d-none d-md-table-cell">Lokasi</th>
+                                <th class="text-center">Total Peserta</th>
                                 <th class="text-end">Aksi</th>
                             </tr>
                         </thead>
@@ -221,7 +250,10 @@
                                 <tr>
                                     <td class="text-muted">{{ $trainings->firstItem() + $loop->index }}</td>
                                     <td>
-                                        <div class="training-name">{{ $training->nama_pelatihan }}</div>
+                                        <a class="training-name text-decoration-none"
+                                            href="{{ route('training.show', $training) }}">
+                                            {{ $training->nama_pelatihan }}
+                                        </a>
                                         @if ($training->keterangan)
                                             <div class="training-note" title="{{ $training->keterangan }}">
                                                 {{ $training->keterangan }}
@@ -237,36 +269,46 @@
                                     </td>
                                     <td class="text-nowrap">{{ $training->tanggal_aktual->format('d M Y') }}</td>
                                     <td class="d-none d-md-table-cell">{{ $training->lokasi ?: '—' }}</td>
+                                    <td class="text-center">{{ $training->participants->count() }}</td>
                                     <td class="text-end text-nowrap">
-                                        <button type="button"
-                                            class="btn btn-sm btn-outline-primary training-action-btn js-edit-training"
-                                            data-bs-toggle="modal" data-bs-target="#trainingModal"
-                                            title="Ubah training"
-                                            data-url="{{ route('training.update', array_merge(['training' => $training->id], request()->query())) }}"
-                                            data-id="{{ $training->id }}"
-                                            data-nama="{{ $training->nama_pelatihan }}"
-                                            data-tema="{{ $training->tema }}"
-                                            data-tanggal="{{ $training->tanggal_aktual->format('Y-m-d') }}"
-                                            data-lokasi="{{ $training->lokasi }}"
-                                            data-sertifikat="{{ $training->sertifikat }}"
-                                            data-keterangan="{{ $training->keterangan }}"
-                                            aria-label="Ubah {{ $training->nama_pelatihan }}">
-                                            <span class="material-symbols-outlined" style="font-size:17px">edit</span>
-                                        </button>
-                                        <button type="button"
-                                            class="btn btn-sm btn-outline-danger training-action-btn js-delete-training"
-                                            data-bs-toggle="modal" data-bs-target="#deleteTrainingModal"
-                                            title="Hapus training"
-                                            data-url="{{ route('training.destroy', array_merge(['training' => $training->id], request()->query())) }}"
-                                            data-name="{{ $training->nama_pelatihan }}"
-                                            aria-label="Hapus {{ $training->nama_pelatihan }}">
-                                            <span class="material-symbols-outlined" style="font-size:17px">delete</span>
-                                        </button>
+                                        <div class="d-inline-flex align-items-center gap-1">
+                                            <a href="{{ route('training.show', $training) }}"
+                                                class="btn btn-sm btn-outline-secondary training-action-btn"
+                                                title="Detail training"
+                                                aria-label="Detail {{ $training->nama_pelatihan }}">
+                                                <span class="material-symbols-outlined" style="font-size:17px">visibility</span>
+                                            </a>
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-primary training-action-btn js-edit-training"
+                                                data-bs-toggle="modal" data-bs-target="#trainingModal"
+                                                title="Ubah training"
+                                                data-url="{{ route('training.update', array_merge(['training' => $training->id], request()->query())) }}"
+                                                data-id="{{ $training->id }}"
+                                                data-nama="{{ $training->nama_pelatihan }}"
+                                                data-tema="{{ $training->tema }}"
+                                                data-tanggal="{{ $training->tanggal_aktual->format('Y-m-d') }}"
+                                                data-lokasi="{{ $training->lokasi }}"
+                                                data-sertifikat="{{ $training->sertifikat }}"
+                                                data-keterangan="{{ $training->keterangan }}"
+                                                data-participants="{{ $training->participants->pluck('karyawanstaff_id')->implode(',') }}"
+                                                aria-label="Ubah {{ $training->nama_pelatihan }}">
+                                                <span class="material-symbols-outlined" style="font-size:17px">edit</span>
+                                            </button>
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-danger training-action-btn js-delete-training"
+                                                data-bs-toggle="modal" data-bs-target="#deleteTrainingModal"
+                                                title="Hapus training"
+                                                data-url="{{ route('training.destroy', array_merge(['training' => $training->id], request()->query())) }}"
+                                                data-name="{{ $training->nama_pelatihan }}"
+                                                aria-label="Hapus {{ $training->nama_pelatihan }}">
+                                                <span class="material-symbols-outlined" style="font-size:17px">delete</span>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="py-5 text-center">
+                                    <td colspan="7" class="py-5 text-center">
                                         <h6 class="fw-semibold mb-1">
                                             {{ request('search') ? 'Training tidak ditemukan' : 'Belum ada data training' }}
                                         </h6>
@@ -365,6 +407,39 @@
                                         placeholder="Contoh: Ruang Rapat, Lantai 2">
                                 </div>
                             </div>
+                            <div id="trainingParticipantsField" class="mb-3">
+                                <label for="trainingParticipants" class="form-label">
+                                    Peserta <span class="text-danger">*</span>
+                                </label>
+                                <input id="trainingParticipantSearch" type="search" class="form-control mb-2"
+                                    placeholder="Cari nama, NPK, atau departemen..." autocomplete="off">
+                                <div id="trainingParticipantList" class="training-participant-list">
+                                    @foreach ($karyawanstaffs as $karyawanstaff)
+                                        <label class="training-participant-option"
+                                            data-search="{{ \Illuminate\Support\Str::lower(implode(' ', array_filter([$karyawanstaff->nama, $karyawanstaff->npk, $karyawanstaff->departement]))) }}">
+                                            <input class="form-check-input mt-1" type="checkbox" name="karyawanstaff_ids[]"
+                                                value="{{ $karyawanstaff->id }}"
+                                                @checked(in_array((string) $karyawanstaff->id, (array) old('karyawanstaff_ids', []), true))>
+                                            <span>
+                                                <span class="d-block fw-semibold">{{ $karyawanstaff->nama }}</span>
+                                                <span class="small text-muted">
+                                                    {{ $karyawanstaff->npk ?: 'Tanpa NPK' }}
+                                                    @if ($karyawanstaff->departement)
+                                                        · {{ $karyawanstaff->departement }}
+                                                    @endif
+                                                </span>
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <small class="text-muted">Pilih peserta yang mengikuti training ini.</small>
+                                    <small id="trainingParticipantCount" class="text-muted"></small>
+                                </div>
+                                <small id="trainingParticipantEditNote" class="form-text text-warning d-none">
+                                    Menghapus peserta saat edit juga akan menghapus isian training peserta tersebut.
+                                </small>
+                            </div>
                         </div>
 
                         <div class="modal-footer border-top">
@@ -406,6 +481,38 @@
         const trainingForm = document.getElementById('trainingForm');
         const trainingModalLabel = document.getElementById('trainingModalLabel');
         const trainingModalEl = document.getElementById('trainingModal');
+        const trainingParticipantsField = document.getElementById('trainingParticipantsField');
+        const trainingParticipantEditNote = document.getElementById('trainingParticipantEditNote');
+        const trainingParticipantCheckboxes = Array.from(
+            document.querySelectorAll('#trainingParticipantList input[name="karyawanstaff_ids[]"]')
+        );
+        const trainingParticipantCount = document.getElementById('trainingParticipantCount');
+
+        function updateTrainingParticipantCount() {
+            const selectedCount = trainingParticipantCheckboxes.filter(function (checkbox) {
+                return checkbox.checked;
+            }).length;
+            trainingParticipantCount.textContent = selectedCount + ' peserta dipilih';
+        }
+
+        function setTrainingParticipants(participantIds) {
+            const selectedIds = new Set(participantIds.map(String));
+            trainingParticipantCheckboxes.forEach(function (checkbox) {
+                checkbox.checked = selectedIds.has(checkbox.value);
+            });
+            updateTrainingParticipantCount();
+        }
+
+        trainingParticipantCheckboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', updateTrainingParticipantCount);
+        });
+
+        document.getElementById('trainingParticipantSearch').addEventListener('input', function (event) {
+            const search = event.target.value.trim().toLowerCase();
+            document.querySelectorAll('.training-participant-option').forEach(function (option) {
+                option.hidden = !option.dataset.search.includes(search);
+            });
+        });
 
         document.querySelectorAll('[data-bs-target="#trainingModal"]:not(.js-edit-training)').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -415,7 +522,14 @@
                 document.getElementById('trainingMethod').value = '';
                 document.getElementById('trainingFormMode').value = 'create';
                 document.getElementById('trainingId').value = '';
-                trainingForm.querySelectorAll('input:not([type="hidden"]), select, textarea')
+                trainingParticipantsField.classList.remove('d-none');
+                trainingParticipantEditNote.classList.add('d-none');
+                document.getElementById('trainingParticipantSearch').value = '';
+                document.querySelectorAll('.training-participant-option').forEach(function (option) {
+                    option.hidden = false;
+                });
+                setTrainingParticipants([]);
+                trainingForm.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]), select, textarea')
                     .forEach(function (field) {
                         field.value = '';
                     });
@@ -434,6 +548,13 @@
                 document.getElementById('trainingTheme').value = button.dataset.tema;
                 document.getElementById('trainingDate').value = button.dataset.tanggal;
                 document.getElementById('trainingLocation').value = button.dataset.lokasi;
+                trainingParticipantsField.classList.remove('d-none');
+                trainingParticipantEditNote.classList.remove('d-none');
+                document.getElementById('trainingParticipantSearch').value = '';
+                document.querySelectorAll('.training-participant-option').forEach(function (option) {
+                    option.hidden = false;
+                });
+                setTrainingParticipants(button.dataset.participants.split(',').filter(Boolean));
                 trainingModalLabel.textContent = 'Ubah Training';
             });
         });
@@ -459,6 +580,16 @@
 
         @if ($errors->any() && old('_form'))
             document.addEventListener('DOMContentLoaded', function () {
+                @if (old('_form') === 'edit')
+                    const editTrainingId = @json((string) old('training_id'));
+                    const editButton = document.querySelector('.js-edit-training[data-id="' + editTrainingId + '"]');
+                    if (editButton) {
+                        editButton.click();
+                        setTrainingParticipants(@json((array) old('karyawanstaff_ids', [])));
+                    }
+                @else
+                    setTrainingParticipants(@json((array) old('karyawanstaff_ids', [])));
+                @endif
                 bootstrap.Modal.getOrCreateInstance(trainingModalEl).show();
             });
         @endif

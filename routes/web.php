@@ -8,6 +8,7 @@ use App\Http\Controllers\HRD\DeptHRD\KaryawanstaffController;
 use App\Http\Controllers\HRD\DeptHRD\DepartemenController;
 use App\Http\Controllers\HRD\DeptHRD\TrainingController;
 use App\Http\Controllers\HRD\DeptHRD\OnboardingController;
+use App\Http\Controllers\HRD\DeptHRD\AssetController;
 
 Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding.index');
 Route::get('/onboarding/tasks/{onboardingTask}', [OnboardingController::class, 'show'])->name('onboarding.tasks.show');
@@ -17,6 +18,7 @@ Route::patch('/onboarding/tasks/{onboardingTask}/toggle', [OnboardingController:
 Route::post('/onboarding/assignments', [OnboardingController::class, 'assign'])->name('onboarding.assignments.store');
 Route::patch('/onboarding/assignments/{assignment}/status', [OnboardingController::class, 'updateStatus'])->name('onboarding.assignments.status');
 Route::get('/training', [TrainingController::class, 'index'])->name('training.index');
+Route::get('/training/{training}', [TrainingController::class, 'show'])->name('training.show');
 Route::post('/training', [TrainingController::class, 'store'])->name('training.store');
 Route::put('/training/{training}', [TrainingController::class, 'update'])->name('training.update');
 Route::delete('/training/{training}', [TrainingController::class, 'destroy'])->name('training.destroy');
@@ -24,6 +26,9 @@ Route::get('/departemen', [DepartemenController::class, 'index'])->name('departe
 Route::post('/departemen', [DepartemenController::class, 'store'])->name('departemen.store');
 Route::put('/departemen/{departemen}', [DepartemenController::class, 'update'])->name('departemen.update');
 Route::delete('/departemen/{departemen}', [DepartemenController::class, 'destroy'])->name('departemen.destroy');
+Route::get('/asset', [AssetController::class, 'index'])->name('asset.index');
+Route::post('/asset', [AssetController::class, 'store'])->name('asset.store');
+Route::put('/asset/{asset}', [AssetController::class, 'update'])->name('asset.update');
 
 Route::get('/karyawan', [KaryawanController::class, 'index'])->name('karyawan.index');
 Route::post('/karyawan', [KaryawanController::class, 'store'])->name('karyawan.store');
@@ -34,6 +39,10 @@ Route::get('/staffmgr', [KaryawanstaffController::class, 'index'])->name('staff.
 Route::get('/staff', [KaryawanstaffController::class, 'index'])->name('staff.all');
 Route::post('/staffmgr', [KaryawanstaffController::class, 'store'])->name('staff.store');
 Route::get('/staffmgr/{id}', [KaryawanstaffController::class, 'show'])->name('staff.show');
+Route::post('/staffmgr/{karyawanstaff}/facilities', [KaryawanstaffController::class, 'storeFacility'])
+    ->name('staff.facilities.store');
+Route::put('/staffmgr/{karyawanstaff}/training-participants/{trainingParticipant}', [KaryawanstaffController::class, 'updateTrainingParticipant'])
+    ->name('staff.training-participants.update');
 Route::post('/staffmgr/{karyawanstaff}/onboarding', [OnboardingController::class, 'assignToStaff'])->name('onboarding.staff.assign');
 Route::get('/staffmgr/{id}/edit', [KaryawanstaffController::class, 'edit'])->name('staff.edit');
 Route::put('/staffmgr/{id}', [KaryawanstaffController::class, 'update'])->name('staff.update');

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\HRD\DeptHRD;
 
 use App\Http\Controllers\Controller;
+use App\Models\Asset;
 use App\Models\Departemen;
 use App\Models\Karyawanstaff;
 use App\Models\OnboardingTask;
+use App\Models\TrainingParticipant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -121,19 +123,26 @@ class KaryawanstaffController extends Controller
 
     public function edit($id)
     {
-        $karyawanstaff = Karyawanstaff::with(['personal', 'facilities'])->findOrFail($id);
+        $karyawanstaff = Karyawanstaff::with(['personal', 'facilities.asset'])->findOrFail($id);
         $departements = Departemen::query()->orderBy('nama_departemen')->pluck('nama_departemen');
+        $assets = Asset::query()->orderBy('name')->get(['id', 'name', 'code']);
 
-        return view('role.hrd.karyawanstaff.karyawanstaffdept.editkaryawan', compact('karyawanstaff', 'departements'));
+        return view('role.hrd.karyawanstaff.karyawanstaffdept.editkaryawan', compact(
+            'karyawanstaff',
+            'departements',
+            'assets'
+        ));
     }
 
     public function show($id)
     {
         $karyawanstaff = Karyawanstaff::with([
             'personal',
-            'facilities',
+            'facilities.asset',
             'onboardingAssignments.onboardingTask',
+            'trainingParticipants.training',
         ])->findOrFail($id);
+        $assets = Asset::query()->orderBy('name')->get(['id', 'name', 'code']);
         $availableOnboardingTasks = OnboardingTask::query()
             ->where('is_active', true)
             ->whereDoesntHave('assignments', function ($query) use ($karyawanstaff) {
@@ -144,8 +153,49 @@ class KaryawanstaffController extends Controller
 
         return view('role.hrd.karyawanstaff.karyawanstaffdept.detailkaryawan', compact(
             'karyawanstaff',
+            'assets',
             'availableOnboardingTasks'
         ));
+    }
+
+    public function storeFacility(Request $request, Karyawanstaff $karyawanstaff)
+    {
+        $validated = $request->validate([
+            'asset_id' => ['required', 'integer', 'exists:assets,id'],
+            'tanggal_pemberian' => ['nullable', 'date'],
+            'kondisi' => ['nullable', 'string', 'max:50'],
+            'tanggal_pengembalian' => ['nullable', 'date', 'after_or_equal:tanggal_pemberian'],
+            'keterangan' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $karyawanstaff->facilities()->create($validated);
+
+        return redirect()->route('staff.show', $karyawanstaff)
+            ->with('success', 'Asset berhasil ditautkan ke karyawan.');
+    }
+
+    public function updateTrainingParticipant(
+        Request $request,
+        Karyawanstaff $karyawanstaff,
+        TrainingParticipant $trainingParticipant
+    ) {
+        abort_unless($trainingParticipant->karyawanstaff_id === $karyawanstaff->id, 404);
+
+        $validated = $request->validate([
+            'nilai_pre_test' => ['nullable', 'numeric', 'between:0,100'],
+            'nilai_post_test' => ['nullable', 'numeric', 'between:0,100'],
+            'hasil_training' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $attributes = [
+            'nilai_pre_test' => $validated['nilai_pre_test'] ?? null,
+            'nilai_post_test' => $validated['nilai_post_test'] ?? null,
+            'hasil_training' => $validated['hasil_training'] ?? null,
+        ];
+        $trainingParticipant->update($attributes);
+
+        return redirect()->route('staff.show', $karyawanstaff)
+            ->with('success', 'Isian training karyawan berhasil diperbarui.');
     }
 
     public function update(Request $request, $id)
@@ -189,12 +239,9 @@ class KaryawanstaffController extends Controller
                 'integer',
                 Rule::exists('facilities', 'id')->where('karyawanstaff_id', $karyawanstaff->id),
             ],
-            'profile.facilities.*.item' => ['nullable', 'string', 'max:255'],
-            'profile.facilities.*.kategori' => ['nullable', 'string', 'max:100'],
-            'profile.facilities.*.nomor' => ['nullable', 'string', 'max:100'],
+            'profile.facilities.*.asset_id' => ['nullable', 'integer', 'exists:assets,id'],
             'profile.facilities.*.tanggal' => ['nullable', 'date'],
             'profile.facilities.*.kondisi' => ['nullable', 'string', 'max:50'],
-            'profile.facilities.*.status' => ['nullable', 'string', 'max:100'],
             'profile.facilities.*.tanggal_pengembalian' => ['nullable', 'date'],
             'profile.facilities.*.catatan' => ['nullable', 'string', 'max:2000'],
         ]);
@@ -205,13 +252,13 @@ class KaryawanstaffController extends Controller
                 }
 
                 $hasOtherValue = collect($facility)
-                    ->except('id', 'item')
+                    ->except('id', 'asset_id')
                     ->contains(fn ($value) => filled($value));
 
-                if ($hasOtherValue && blank($facility['item'] ?? null)) {
+                if ($hasOtherValue && blank($facility['asset_id'] ?? null)) {
                     $validator->errors()->add(
-                        "profile.facilities.{$index}.item",
-                        'Nama fasilitas wajib diisi jika data fasilitas lainnya diisi.'
+                        "profile.facilities.{$index}.asset_id",
+                        'Pilih asset jika data serah terima lainnya diisi.'
                     );
                 }
             }
@@ -261,8 +308,9 @@ class KaryawanstaffController extends Controller
             $facilityRows = array_values(array_filter(
                 $validated['profile']['facilities'] ?? [],
                 fn ($row) => collect($row)
-                    ->except('id')
+                    ->except('id', 'asset_id')
                     ->contains(fn ($value) => filled($value))
+                    || filled($row['asset_id'] ?? null)
             ));
             $submittedFacilityIds = collect($facilityRows)
                 ->pluck('id')
@@ -277,12 +325,9 @@ class KaryawanstaffController extends Controller
 
             foreach ($facilityRows as $facility) {
                 $attributes = [
-                    'nama_fasilitas' => $facility['item'] ?? '',
-                    'kategori' => $facility['kategori'] ?? null,
-                    'nomor_aset' => $facility['nomor'] ?? null,
+                    'asset_id' => $facility['asset_id'] ?? null,
                     'tanggal_pemberian' => $facility['tanggal'] ?? null,
                     'kondisi' => $facility['kondisi'] ?? null,
-                    'status' => filled($facility['status'] ?? null) ? $facility['status'] : 'Diberikan',
                     'tanggal_pengembalian' => $facility['tanggal_pengembalian'] ?? null,
                     'keterangan' => $facility['catatan'] ?? null,
                 ];

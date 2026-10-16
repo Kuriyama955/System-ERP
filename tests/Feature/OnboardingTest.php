@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 beforeEach(function () {
+    Schema::dropIfExists('training_participants');
+    Schema::dropIfExists('assets');
     Schema::dropIfExists('facilities');
     Schema::dropIfExists('personal');
     Schema::dropIfExists('onboarding_task_karyawan');
@@ -21,6 +23,11 @@ beforeEach(function () {
         $table->date('tmk')->nullable();
         $table->string('status')->default('ONBOARDING');
         $table->timestamps();
+    });
+
+    Schema::create('training_participants', function ($table) {
+        $table->id();
+        $table->unsignedBigInteger('karyawanstaff_id');
     });
 
     Schema::create('departemens', function ($table) {
@@ -59,14 +66,18 @@ beforeEach(function () {
     Schema::create('facilities', function ($table) {
         $table->id();
         $table->foreignId('karyawanstaff_id')->nullable();
-        $table->string('nama_fasilitas');
-        $table->string('kategori')->nullable();
-        $table->string('nomor_aset')->nullable();
+        $table->unsignedBigInteger('asset_id')->nullable();
         $table->date('tanggal_pemberian')->nullable();
         $table->string('kondisi')->nullable();
-        $table->string('status')->nullable();
         $table->date('tanggal_pengembalian')->nullable();
         $table->text('keterangan')->nullable();
+        $table->timestamps();
+    });
+
+    Schema::create('assets', function ($table) {
+        $table->id();
+        $table->string('name');
+        $table->string('code')->unique();
         $table->timestamps();
     });
 
@@ -77,6 +88,8 @@ beforeEach(function () {
 afterEach(function () {
     $migration = require base_path('database/migrations/2026_10_14_000000_create_onboarding_tables.php');
     $migration->down();
+    Schema::dropIfExists('training_participants');
+    Schema::dropIfExists('assets');
     Schema::dropIfExists('facilities');
     Schema::dropIfExists('personal');
     Schema::dropIfExists('karyawanstaffs');
@@ -148,6 +161,19 @@ test('HRD can manage master tasks, assign tasks to multiple employees and update
         ->assertSee('Selesai');
 });
 
+test('onboarding task seeder creates the requested tasks idempotently', function () {
+    $seeder = app(Database\Seeders\OnboardingTaskSeeder::class);
+    $seeder->run();
+    $seeder->run();
+
+    expect(DB::table('onboarding_tasks')->count())->toBe(3)
+        ->and(DB::table('onboarding_tasks')->where('is_active', true)->count())->toBe(3);
+
+    $this->assertDatabaseHas('onboarding_tasks', ['nama_task' => 'Induksi']);
+    $this->assertDatabaseHas('onboarding_tasks', ['nama_task' => 'Pelengkapan Data']);
+    $this->assertDatabaseHas('onboarding_tasks', ['nama_task' => 'Serah Terima Fasilitas']);
+});
+
 test('inactive master tasks cannot be assigned', function () {
     DB::table('karyawanstaffs')->insert([
         'nama' => 'Citra',
@@ -209,6 +235,105 @@ test('HRD can add an active onboarding task from an employee profile', function 
         ->assertSessionHasErrors('onboarding_task_id');
 
     expect(DB::table('onboarding_task_karyawan')->count())->toBe(1);
+});
+
+test('HRD can assign master assets to a staff profile', function () {
+    DB::table('departemens')->insert([
+        'nama_departemen' => 'Produksi',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    $staffId = DB::table('karyawanstaffs')->insertGetId([
+        'nama' => 'Dewi',
+        'npk' => '1001',
+        'departement' => 'Produksi',
+        'jabatan' => 'Operator',
+        'lokasi' => 'Pabrik',
+        'tmk' => '2026-10-15',
+        'status' => 'AKTIF',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    $assetId = DB::table('assets')->insertGetId([
+        'name' => 'Laptop Dell',
+        'code' => 'LTP-001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->get(route('staff.edit', $staffId))
+        ->assertOk()
+        ->assertSee('Laptop Dell')
+        ->assertSee('LTP-001');
+
+    $this->put(route('staff.update', $staffId), [
+        'nama' => 'Dewi',
+        'npk' => '1001',
+        'departement' => 'Produksi',
+        'jabatan' => 'Operator',
+        'lokasi' => 'Pabrik',
+        'tmk' => '2026-10-15',
+        'status' => 'AKTIF',
+        'profile' => [
+            'facilities' => [[
+                'asset_id' => $assetId,
+                'tanggal' => '2026-10-17',
+                'kondisi' => 'Baik',
+                'catatan' => 'Diterima karyawan',
+            ]],
+        ],
+    ])->assertRedirect(route('staff.show', $staffId));
+
+    $this->get(route('staff.show', $staffId))
+        ->assertOk()
+        ->assertSee('Laptop Dell')
+        ->assertSee('LTP-001')
+        ->assertSee('Diterima karyawan');
+
+    expect(DB::table('facilities')->where('karyawanstaff_id', $staffId)->value('asset_id'))
+        ->toBe($assetId);
+});
+
+test('HRD can link an asset directly from the employee detail page', function () {
+    $staffId = DB::table('karyawanstaffs')->insertGetId([
+        'nama' => 'Rudi',
+        'npk' => '1002',
+        'departement' => 'Produksi',
+        'jabatan' => 'Operator',
+        'lokasi' => 'Pabrik',
+        'tmk' => '2026-10-15',
+        'status' => 'AKTIF',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    $assetId = DB::table('assets')->insertGetId([
+        'name' => 'Laptop Lenovo',
+        'code' => 'LTP-002',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->get(route('staff.show', $staffId))
+        ->assertOk()
+        ->assertSee('Tambah Fasilitas')
+        ->assertSee('Edit Profil Karyawan');
+
+    $this->post(route('staff.facilities.store', $staffId), [
+        'asset_id' => $assetId,
+        'tanggal_pemberian' => '2026-10-17',
+        'kondisi' => 'Baik',
+        'keterangan' => 'Diserahkan langsung',
+    ])->assertRedirect(route('staff.show', $staffId))
+        ->assertSessionHas('success', 'Asset berhasil ditautkan ke karyawan.');
+
+    $this->get(route('staff.show', $staffId))
+        ->assertOk()
+        ->assertSee('Laptop Lenovo')
+        ->assertSee('LTP-002')
+        ->assertSee('Diserahkan langsung');
+
+    expect(DB::table('facilities')->where('karyawanstaff_id', $staffId)->value('asset_id'))
+        ->toBe($assetId);
 });
 
 test('new staff start in onboarding and HRD can update their employment status', function () {

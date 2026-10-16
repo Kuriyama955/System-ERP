@@ -26,4 +26,8 @@ class Karyawanstaff extends Model
         return $this->hasMany(OnboardingTaskKaryawan::class, 'karyawanstaff_id');
     }
 
+    public function trainingParticipants(): HasMany
+    {
+        return $this->hasMany(TrainingParticipant::class, 'karyawanstaff_id');
+    }
 }

@@ -66,12 +66,9 @@
         $profile['facilities'] = old('profile.facilities', $karyawanstaff->facilities
             ->map(fn ($facility) => [
                 'id' => $facility->id,
-                'item' => $facility->nama_fasilitas,
-                'kategori' => $facility->kategori,
-                'nomor' => $facility->nomor_aset,
+                'asset_id' => $facility->asset_id,
                 'tanggal' => $facility->tanggal_pemberian?->format('Y-m-d'),
                 'kondisi' => $facility->kondisi,
-                'status' => $facility->status,
                 'tanggal_pengembalian' => $facility->tanggal_pengembalian?->format('Y-m-d'),
                 'catatan' => $facility->keterangan,
             ])
@@ -88,12 +85,9 @@
         $repeaters = [
             'facilities' => [
                 ['name' => '', 'key' => 'id', 'type' => 'hidden'],
-                ['name' => 'Item', 'key' => 'item', 'type' => 'text'],
-                ['name' => 'Kategori', 'key' => 'kategori', 'type' => 'text'],
-                ['name' => 'Nomor / identitas', 'key' => 'nomor', 'type' => 'text'],
+                ['name' => 'Asset', 'key' => 'asset_id', 'type' => 'select'],
                 ['name' => 'Tanggal', 'key' => 'tanggal', 'type' => 'date'],
                 ['name' => 'Kondisi', 'key' => 'kondisi', 'type' => 'text'],
-                ['name' => 'Status', 'key' => 'status', 'type' => 'text'],
                 ['name' => 'Tanggal pengembalian', 'key' => 'tanggal_pengembalian', 'type' => 'date'],
                 ['name' => 'Keterangan', 'key' => 'catatan', 'type' => 'text'],
             ],
@@ -299,9 +293,22 @@
                                             @else
                                                 <div class="col-md-{{ $field['key'] === 'catatan' ? '12' : '4' }}">
                                                     <label class="form-label">{{ $field['name'] }}</label>
-                                                    <input type="{{ $field['type'] }}" class="form-control"
-                                                        name="profile[{{ $list }}][{{ $index }}][{{ $field['key'] }}]"
-                                                        value="{{ old('profile.'.$list.'.'.$index.'.'.$field['key'], data_get($row, $field['key'])) }}">
+                                                    @if ($field['type'] === 'select')
+                                                        <select class="form-select"
+                                                            name="profile[{{ $list }}][{{ $index }}][{{ $field['key'] }}]">
+                                                            <option value="">Pilih asset</option>
+                                                            @foreach ($assets as $asset)
+                                                                <option value="{{ $asset->id }}"
+                                                                    {{ (string) old('profile.'.$list.'.'.$index.'.'.$field['key'], data_get($row, $field['key'])) === (string) $asset->id ? 'selected' : '' }}>
+                                                                    {{ $asset->name }} ({{ $asset->code }})
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    @else
+                                                        <input type="{{ $field['type'] }}" class="form-control"
+                                                            name="profile[{{ $list }}][{{ $index }}][{{ $field['key'] }}]"
+                                                            value="{{ old('profile.'.$list.'.'.$index.'.'.$field['key'], data_get($row, $field['key'])) }}">
+                                                    @endif
                                                 </div>
                                             @endif
                                         @endforeach
@@ -322,8 +329,18 @@
                                         @else
                                             <div class="col-md-{{ $field['key'] === 'catatan' ? '12' : '4' }}">
                                                 <label class="form-label">{{ $field['name'] }}</label>
-                                                <input type="{{ $field['type'] }}" class="form-control"
-                                                    name="profile[{{ $list }}][__INDEX__][{{ $field['key'] }}]">
+                                                @if ($field['type'] === 'select')
+                                                    <select class="form-select"
+                                                        name="profile[{{ $list }}][__INDEX__][{{ $field['key'] }}]">
+                                                        <option value="">Pilih asset</option>
+                                                        @foreach ($assets as $asset)
+                                                            <option value="{{ $asset->id }}">{{ $asset->name }} ({{ $asset->code }})</option>
+                                                        @endforeach
+                                                    </select>
+                                                @else
+                                                    <input type="{{ $field['type'] }}" class="form-control"
+                                                        name="profile[{{ $list }}][__INDEX__][{{ $field['key'] }}]">
+                                                @endif
                                             </div>
                                         @endif
                                     @endforeach

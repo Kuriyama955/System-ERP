@@ -144,7 +144,7 @@
                         </ul>
                     </li>
                     <li
-                        class="menu-item {{ request()->routeIs('staff.*', 'karyawan.*', 'departemen.*', 'training.*', 'onboarding.*') ? 'active open' : '' }}">
+                        class="menu-item {{ request()->routeIs('staff.*', 'karyawan.*', 'departemen.*', 'training.*', 'onboarding.*', 'asset.*') ? 'active open' : '' }}">
                         <a href="javascript:void(0);" class="menu-link menu-toggle">
                             <i class="menu-icon icon-base bx bx-group"></i>
                             <div data-i18n="HRD">HRD</div>
@@ -173,6 +173,11 @@
                             <li class="menu-item {{ request()->routeIs('onboarding.*') ? 'active' : '' }}">
                                 <a href="{{ route('onboarding.index') }}" class="menu-link">
                                     <div data-i18n="Onboarding">Onboarding</div>
+                                </a>
+                            </li>
+                            <li class="menu-item {{ request()->routeIs('asset.*') ? 'active' : '' }}">
+                                <a href="{{ route('asset.index') }}" class="menu-link">
+                                    <div data-i18n="Asset">Asset</div>
                                 </a>
                             </li>
                         </ul>

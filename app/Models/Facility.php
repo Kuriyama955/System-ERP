@@ -12,12 +12,9 @@ class Facility extends Model
     protected $fillable = [
         'karyawan_id',
         'karyawanstaff_id',
-        'nama_fasilitas',
-        'kategori',
-        'nomor_aset',
+        'asset_id',
         'tanggal_pemberian',
         'kondisi',
-        'status',
         'tanggal_pengembalian',
         'keterangan',
     ];
@@ -40,5 +37,10 @@ class Facility extends Model
     public function karyawanstaff(): BelongsTo
     {
         return $this->belongsTo(Karyawanstaff::class, 'karyawanstaff_id');
+    }
+
+    public function asset(): BelongsTo
+    {
+        return $this->belongsTo(Asset::class);
     }
 }

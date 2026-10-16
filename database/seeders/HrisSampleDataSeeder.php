@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Asset;
 use App\Models\Karyawan;
 use App\Models\Karyawanstaff;
 use Faker\Factory;
@@ -90,13 +91,15 @@ class HrisSampleDataSeeder extends Seeder
         ]);
 
         if (! $facilitiesRelation->exists()) {
+            $asset = Asset::query()->firstOrCreate(
+                ['code' => 'DEMO-AST-'.$employeeType.'-'.$employeeId],
+                ['name' => 'Laptop kerja']
+            );
+
             $facilitiesRelation->create([
-                'nama_fasilitas' => 'Laptop kerja',
-                'kategori' => 'Elektronik',
-                'nomor_aset' => 'DEMO-AST-'.$employeeType.'-'.$employeeId,
+                'asset_id' => $asset->id,
                 'tanggal_pemberian' => now()->toDateString(),
                 'kondisi' => 'Baik',
-                'status' => 'Diberikan',
                 'keterangan' => 'DATA DEMO - bukan riwayat aset sebenarnya',
             ]);
         }

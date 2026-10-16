@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Training extends Model
 {
@@ -20,5 +21,10 @@ class Training extends Model
         return [
             'tanggal_aktual' => 'date',
         ];
+    }
+
+    public function participants(): HasMany
+    {
+        return $this->hasMany(TrainingParticipant::class);
     }
 }

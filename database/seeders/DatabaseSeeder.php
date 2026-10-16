@@ -19,6 +19,14 @@ class DatabaseSeeder extends Seeder
 
         $this->call(DepartemenSeeder::class);
 
+        if (! app()->environment('production')) {
+            $this->call([
+                HrisTrainingSeeder::class,
+                AssetSeeder::class,
+                OnboardingTaskSeeder::class,
+            ]);
+        }
+
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',

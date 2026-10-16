@@ -552,9 +552,10 @@
             : 'Belum diisi';
 
         $profileTabs = [
-            ['id' => 'personal', 'label' => 'Data Pribadi', 'icon' => 'person'],
-            ['id' => 'employee', 'label' => 'Informasi Pekerjaan', 'icon' => 'badge'],
+            ['id' => 'personal', 'label' => 'Personal', 'icon' => 'person'],
+            ['id' => 'employee', 'label' => 'Employee', 'icon' => 'badge'],
             ['id' => 'onboarding', 'label' => 'Onboarding', 'icon' => 'checklist'],
+            ['id' => 'training', 'label' => 'Training', 'icon' => 'school'],
         ];
         $completedOnboardingTasks = $karyawanstaff->onboardingAssignments
             ->where('status', 'selesai')
@@ -586,14 +587,14 @@
             </div> 
             
             <div class="d-flex gap-2">
+                <a href="{{ route('staff.edit', $karyawanstaff->id) }}" class="btn btn-primary btn-sm">
+                    <span class="material-symbols-outlined align-middle me-1" style="font-size:17px">edit</span>
+                    Edit Profil Karyawan
+                </a>
                 <a href="{{ route('staff.index') }}" class="btn btn-outline-secondary btn-sm">
                     <span class="material-symbols-outlined align-middle me-1" style="font-size:17px">arrow_back</span>
                     Kembali
                 </a>
-                {{-- <a href="{{ route('staff.edit', $karyawanstaff->id) }}" class="btn btn-primary btn-sm">
-                    <span class="material-symbols-outlined align-middle me-1" style="font-size:17px">edit</span>
-                    Ubah Profil
-                </a> --}}
             </div>
         </div>
 
@@ -759,29 +760,34 @@
                         <div class="row g-3 mt-1">
                             <div class="col-12">
                                 <div class="info-card">
-                                    <h6 class="info-card-title">
-                                        <span class="material-symbols-outlined">apparel</span>
-                                        Fasilitas
-                                    </h6>
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                                        <h6 class="info-card-title mb-0">
+                                            <span class="material-symbols-outlined">apparel</span>
+                                            Fasilitas
+                                        </h6>
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="modal" data-bs-target="#addFacilityModal">
+                                            <span class="material-symbols-outlined align-middle me-1" style="font-size:17px">add</span>
+                                            Tambah Fasilitas
+                                        </button>
+                                    </div>
                                     <div class="table-responsive">
                                         <table class="table profile-table">
                                             <thead>
-                                                <tr><th>Nama Fasilitas</th><th>Kategori</th><th>Nomor Aset</th><th>Tanggal Pemberian</th><th>Kondisi</th><th>Status</th><th>Tanggal Pengembalian</th><th>Keterangan</th></tr>
+                                                <tr><th>Asset</th><th>Kode Asset</th><th>Tanggal Pemberian</th><th>Kondisi</th><th>Tanggal Pengembalian</th><th>Keterangan</th></tr>
                                             </thead>
                                             <tbody>
                                                 @forelse ($profileFacilities as $facility)
                                                     <tr>
-                                                        <td class="fw-semibold">{{ $facility->nama_fasilitas }}</td>
-                                                        <td>{{ $facility->kategori ?: '—' }}</td>
-                                                        <td>{{ $facility->nomor_aset }}</td>
+                                                        <td class="fw-semibold">{{ $facility->asset?->name ?: '—' }}</td>
+                                                        <td>{{ $facility->asset?->code ?: '—' }}</td>
                                                         <td>{{ $facility->tanggal_pemberian?->format('d M Y') }}</td>
                                                         <td>{{ $facility->kondisi ?: '—' }}</td>
-                                                        <td><span class="item-status is-ready">{{ $facility->status }}</span></td>
                                                         <td>{{ $facility->tanggal_pengembalian?->format('d M Y') ?: '—' }}</td>
                                                         <td>{{ $facility->keterangan ?: '—' }}</td>
                                                     </tr>
                                                 @empty
-                                                    <tr><td colspan="8" class="text-center text-muted">Belum ada data fasilitas.</td></tr>
+                                                    <tr><td colspan="6" class="text-center text-muted">Belum ada data fasilitas.</td></tr>
                                                 @endforelse
                                             </tbody>
                                         </table>
@@ -892,6 +898,276 @@
                 @endif
             </section>
 
+            <section class="tab-pane fade" id="panel-training" role="tabpanel"
+                aria-labelledby="tab-training" tabindex="0">
+                <div class="profile-panel">
+                    <div class="profile-panel-heading">
+                        <div class="profile-panel-icon"><span class="material-symbols-outlined">school</span></div>
+                        <div>
+                            <h5 class="profile-panel-title">Training</h5>
+                            <p class="profile-panel-description">Daftar training dan isian hasil yang diperoleh karyawan.</p>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm ms-auto"
+                            data-training-result-open
+                            data-bs-toggle="modal" data-bs-target="#trainingResultModal"
+                            @disabled($karyawanstaff->trainingParticipants->isEmpty())>
+                            Isi Hasil Training
+                        </button>
+                    </div>
+                    <div class="profile-panel-content">
+                        <div class="table-responsive">
+                            <table class="table profile-table">
+                                <thead>
+                                    <tr>
+                                        <th>Training</th>
+                                        <th>Pre-test</th>
+                                        <th>Post-test</th>
+                                        <th>Hasil Training</th>
+                                        <th class="text-end">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($karyawanstaff->trainingParticipants as $participant)
+                                        <tr>
+                                            <td>
+                                                <a class="fw-semibold text-decoration-none"
+                                                    href="{{ route('training.show', $participant->training) }}">
+                                                    {{ $participant->training->nama_pelatihan }}
+                                                </a>
+                                                <div class="text-muted small">
+                                                    {{ $participant->training->tanggal_aktual->format('d M Y') }}
+                                                </div>
+                                            </td>
+                                            <td>{{ \App\Models\TrainingParticipant::formatScore($participant->nilai_pre_test) }}</td>
+                                            <td>{{ \App\Models\TrainingParticipant::formatScore($participant->nilai_post_test) }}</td>
+                                            <td>{{ $participant->hasil_training }}</td>
+                                            <td class="text-end">
+                                                <button type="button"
+                                                    class="btn btn-sm btn-outline-primary js-edit-training-result"
+                                                    data-participant-id="{{ $participant->id }}"
+                                                    data-bs-toggle="modal" data-bs-target="#trainingResultModal">
+                                                    <span class="material-symbols-outlined align-middle" style="font-size:16px">edit</span>
+                                                    Edit
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">
+                                                Belum ada training yang ditugaskan kepada karyawan ini.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="form-text mt-3 mb-0">
+                            Nilai menggunakan rentang 0–100. Data boleh dikosongkan jika belum tersedia.
+                        </p>
+                    </div>
+                </div>
+
+            </section>
+
+        </div>
+
+        <div class="modal fade" id="addFacilityModal" tabindex="-1"
+            aria-labelledby="addFacilityModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form action="{{ route('staff.facilities.store', $karyawanstaff) }}" method="POST">
+                        @csrf
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addFacilityModalLabel">Tautkan Asset ke Karyawan</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="facility-asset" class="form-label">Asset</label>
+                                <select id="facility-asset" name="asset_id" class="form-select" required>
+                                    <option value="">Pilih asset</option>
+                                    @foreach ($assets as $asset)
+                                        <option value="{{ $asset->id }}" @selected((string) old('asset_id') === (string) $asset->id)>
+                                            {{ $asset->name }} ({{ $asset->code }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('asset_id')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                                @if ($assets->isEmpty())
+                                    <div class="form-text">Belum ada asset. Tambahkan asset terlebih dahulu di halaman Asset.</div>
+                                @endif
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="facility-issued-date" class="form-label">Tanggal pemberian</label>
+                                    <input id="facility-issued-date" type="date" name="tanggal_pemberian"
+                                        class="form-control" value="{{ old('tanggal_pemberian') }}">
+                                    @error('tanggal_pemberian')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="facility-condition" class="form-label">Kondisi</label>
+                                    <input id="facility-condition" type="text" name="kondisi" maxlength="50"
+                                        class="form-control" value="{{ old('kondisi') }}">
+                                    @error('kondisi')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="facility-return-date" class="form-label">Tanggal pengembalian</label>
+                                    <input id="facility-return-date" type="date" name="tanggal_pengembalian"
+                                        class="form-control" value="{{ old('tanggal_pengembalian') }}">
+                                    @error('tanggal_pengembalian')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-12">
+                                    <label for="facility-notes" class="form-label">Keterangan</label>
+                                    <textarea id="facility-notes" name="keterangan" rows="3" maxlength="2000"
+                                        class="form-control">{{ old('keterangan') }}</textarea>
+                                    @error('keterangan')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary" @disabled($assets->isEmpty())>Simpan Fasilitas</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="trainingResultModal" tabindex="-1"
+            aria-labelledby="trainingResultModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form id="trainingResultForm" method="POST">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" id="trainingParticipantId" name="training_participant_id">
+                        <div class="modal-header">
+                            <div>
+                                <h5 class="modal-title" id="trainingResultModalLabel">Hasil Training</h5>
+                                <div class="text-muted small" id="trainingResultName"></div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="trainingResultParticipant" class="form-label">Training</label>
+                                <select id="trainingResultParticipant" class="form-select" required>
+                                    <option value="">Pilih training</option>
+                                    @foreach ($karyawanstaff->trainingParticipants as $participant)
+                                        <option value="{{ $participant->id }}"
+                                            data-url="{{ route('staff.training-participants.update', [$karyawanstaff, $participant]) }}"
+                                            data-name="{{ $participant->training->nama_pelatihan }}"
+                                            data-pre-test="{{ \App\Models\TrainingParticipant::formatScore($participant->nilai_pre_test) }}"
+                                            data-post-test="{{ \App\Models\TrainingParticipant::formatScore($participant->nilai_post_test) }}"
+                                            data-result="{{ $participant->hasil_training }}">
+                                            {{ $participant->training->nama_pelatihan }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label for="trainingResultPreTest" class="form-label">Nilai Pre-test</label>
+                                    <input id="trainingResultPreTest" type="number" name="nilai_pre_test"
+                                        min="0" max="100" step="0.01" class="form-control">
+                                </div>
+                                <div class="col-6">
+                                    <label for="trainingResultPostTest" class="form-label">Nilai Post-test</label>
+                                    <input id="trainingResultPostTest" type="number" name="nilai_post_test"
+                                        min="0" max="100" step="0.01" class="form-control">
+                                </div>
+                                <div class="col-12">
+                                    <label for="trainingResultText" class="form-label">Hasil Training</label>
+                                    <textarea id="trainingResultText" name="hasil_training" rows="4"
+                                        maxlength="5000" class="form-control"
+                                        placeholder="Tuliskan hal yang didapat dari training"></textarea>
+                                </div>
+                            </div>
+                            <div class="form-text mt-2">Nilai boleh dikosongkan jika belum tersedia.</div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary">Simpan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
+    <script>
+        @if ($errors->has('asset_id') || $errors->has('tanggal_pemberian') || $errors->has('kondisi') || $errors->has('tanggal_pengembalian') || $errors->has('keterangan'))
+            document.addEventListener('DOMContentLoaded', function () {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('addFacilityModal')).show();
+            });
+        @endif
+
+        const trainingResultModal = document.getElementById('trainingResultModal');
+        const trainingResultForm = document.getElementById('trainingResultForm');
+        const trainingResultParticipant = document.getElementById('trainingResultParticipant');
+
+        function fillTrainingResultForm(option) {
+            if (!option || !option.value) {
+                trainingResultForm.removeAttribute('action');
+                document.getElementById('trainingParticipantId').value = '';
+                document.getElementById('trainingResultName').textContent = '';
+                document.getElementById('trainingResultPreTest').value = '';
+                document.getElementById('trainingResultPostTest').value = '';
+                document.getElementById('trainingResultText').value = '';
+                return;
+            }
+
+            trainingResultForm.action = option.dataset.url;
+            document.getElementById('trainingParticipantId').value = option.value;
+            document.getElementById('trainingResultName').textContent = option.dataset.name;
+            document.getElementById('trainingResultPreTest').value = option.dataset.preTest || '';
+            document.getElementById('trainingResultPostTest').value = option.dataset.postTest || '';
+            document.getElementById('trainingResultText').value = option.dataset.result || '';
+        }
+
+        trainingResultParticipant.addEventListener('change', function () {
+            fillTrainingResultForm(trainingResultParticipant.selectedOptions[0]);
+        });
+
+        document.querySelectorAll('[data-training-result-open]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                trainingResultParticipant.value = '';
+                fillTrainingResultForm(null);
+            });
+        });
+
+        document.querySelectorAll('.js-edit-training-result').forEach(function (button) {
+            button.addEventListener('click', function () {
+                trainingResultParticipant.value = button.dataset.participantId;
+                fillTrainingResultForm(trainingResultParticipant.selectedOptions[0]);
+            });
+        });
+
+        @if ($errors->any() && old('training_participant_id'))
+            document.addEventListener('DOMContentLoaded', function () {
+                const participantId = @json((string) old('training_participant_id'));
+                const option = Array.from(trainingResultParticipant.options)
+                    .find(function (item) {
+                        return item.value === participantId;
+                    });
+                if (option) {
+                    trainingResultParticipant.value = participantId;
+                    fillTrainingResultForm(option);
+                    document.getElementById('trainingResultPreTest').value = @json(old('nilai_pre_test', ''));
+                    document.getElementById('trainingResultPostTest').value = @json(old('nilai_post_test', ''));
+                    document.getElementById('trainingResultText').value = @json(old('hasil_training', ''));
+                    bootstrap.Modal.getOrCreateInstance(trainingResultModal).show();
+                }
+            });
+        @endif
+    </script>
 @endsection
